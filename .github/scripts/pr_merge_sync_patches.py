@@ -71,9 +71,15 @@ def _run_git(args: List[str], check: bool = True) -> str:
         raise RuntimeError(f"Git command failed: {' '.join(cmd)}")
     return result.stdout.strip()
 
-def _clone_subrepo(repo_url: str, destination: Path) -> None:
-    """Clone the given repository to the destination path."""
-    _run_git(["clone", repo_url, str(destination)])
+def _clone_subrepo(repo_url: str, branch: str, destination: Path) -> None:
+    """Clone a specific branch from the given GitHub repository into the destination path."""
+    _run_git([
+        "clone",
+        "--branch", branch,
+        "--single-branch",
+        f"https://github.com/{repo_url}",
+        str(destination)
+    ])
     logger.debug(f"Cloned {repo_url} into {destination}")
 
 def _apply_patch(repo_path: Path, patch_path: Path) -> None:
@@ -105,7 +111,7 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
 
 def _format_commit_message(monorepo_url: str, pr_number: int, merge_sha: str, original_msg: str) -> str:
     """Prepend a sync annotation to the original commit message."""
-    annotation = f"[🔁 Sync from monorepo] {monorepo_url}/pull/{pr_number} (commit {merge_sha[:7]})\n\n"
+    annotation = f"[🔁 Sync from monorepo] https://github.com/{monorepo_url}/pull/{pr_number} (commit {merge_sha[:7]})\n\n"
     return annotation + original_msg
 
 def _commit_changes(repo_path: Path, message: str, author_name: str, author_email: str) -> None:
