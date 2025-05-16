@@ -61,12 +61,18 @@ def get_subtree_info(config: List[RepoEntry], subtrees: List[str]) -> List[RepoE
         logger.warning(f"Some subtrees not found in config: {', '.join(sorted(missing))}")
     return matched
 
-def _run_git(args: List[str], check: bool = True) -> str:
+def _run_git(args: List[str], cwd: Optional[Path] = None) -> str:
     """Run a git command and return stdout."""
     cmd = ["git"] + args
-    logger.debug(f"Running git command: {' '.join(cmd)}")
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    if check and result.returncode != 0:
+    logger.debug(f"Running git command: {' '.join(cmd)} (cwd={cwd})")
+    result = subprocess.run(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if result.returncode != 0:
         logger.error(f"Git command failed: {' '.join(cmd)}\n{result.stderr}")
         raise RuntimeError(f"Git command failed: {' '.join(cmd)}")
     return result.stdout.strip()
