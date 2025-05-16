@@ -171,7 +171,7 @@ def main(argv: Optional[List[str]] = None) -> None:
     config = load_repo_config(args.config)
     subtrees = [line.strip() for line in args.subtrees.splitlines() if line.strip()]
     relevant_subtrees = get_subtree_info(config, subtrees)
-    merge_sha = client.get_squash_merge_commit(client, args.repo, args.pr)
+    merge_sha = client.get_squash_merge_commit(args.repo, args.pr)
     logger.debug(f"Merge commit for PR #{args.pr} in {args.repo}: {merge_sha}")
     for entry in relevant_subtrees:
         prefix = f"{entry.category}/{entry.name}"
