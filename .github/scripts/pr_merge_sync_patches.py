@@ -179,8 +179,7 @@ def main(argv: Optional[List[str]] = None) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             patch_file = Path(tmpdir) / f"{entry.name}.patch"
             generate_patch(prefix, merge_sha, patch_file)
-            author_name, author_email = resolve_patch_author(
-                client.get_pr_by_head_branch(args.repo, args.pr), client)
+            author_name, author_email = resolve_patch_author(client, args.repo, args.pr)
             apply_patch_to_subrepo(entry, args.repo, args.pr,
                                    patch_file, author_name, author_email,
                                    merge_sha, args.dry_run)
