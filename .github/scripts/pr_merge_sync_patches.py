@@ -88,6 +88,11 @@ def _clone_subrepo(repo_url: str, branch: str, destination: Path) -> None:
     ])
     logger.debug(f"Cloned {repo_url} into {destination}")
 
+def _configure_git_user(repo_path: Path) -> None:
+    """Configure git user.name and user.email for the given repository directory."""
+    _run_git(["config", "user.name", "assistant-librarian[bot]"], cwd=repo_path)
+    _run_git(["config", "user.email", "assistant-librarian[bot]@users.noreply.github.com"], cwd=repo_path)
+
 def _apply_patch(repo_path: Path, patch_path: Path) -> None:
     """Apply a patch file to the working tree."""
     _run_git(["apply", str(patch_path)], cwd=repo_path)
@@ -165,6 +170,7 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
         if dry_run:
             logger.info(f"[Dry-run] Would apply patch to {entry.url} as {author_name} <{author_email}>")
             return
+        _configure_git_user(subrepo_path)
         _apply_patch(subrepo_path, patch_path)
         _stage_changes(subrepo_path)
         original_commit_msg = _extract_commit_message_from_patch(patch_path)
