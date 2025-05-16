@@ -105,7 +105,7 @@ def _stage_changes(repo_path: Path) -> None:
     logger.debug(f"Staged all changes in {repo_path}")
 
 def _extract_commit_message_from_patch(patch_path: Path) -> str:
-    """Extract the original commit message from the patch file."""
+    """Extract the original commit message from the patch file, cleaning squash-merge artifacts."""
     with open(patch_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     commit_msg_lines = []
@@ -113,6 +113,10 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
     for line in lines:
         if line.startswith("Subject: "):
             subject = line[len("Subject: "):].strip()
+            # Remove [PATCH] tag in the title
+            subject = subject.replace("[PATCH]", "").strip()
+            # Remove trailing ' #<number>' (PR number added by squash merge)
+            subject = re.sub(r"\s+#\d+$", "", subject)
             commit_msg_lines.append(subject)
             in_msg = True
         elif in_msg:
@@ -123,7 +127,7 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
 
 def _format_commit_message(monorepo_url: str, pr_number: int, merge_sha: str, original_msg: str) -> str:
     """Prepend a sync annotation to the original commit message."""
-    annotation = f"[rocm-libraries] https://github.com/{monorepo_url}/pull/{pr_number} (commit {merge_sha[:7]})\n\n"
+    annotation = f"[rocm-libraries] [#{pr_number}](https://github.com/{monorepo_url}/pull/{pr_number}) (commit {merge_sha[:7]})\n\n"
     return annotation + original_msg
 
 def _commit_changes(repo_path: Path, message: str, author_name: str, author_email: str) -> None:
