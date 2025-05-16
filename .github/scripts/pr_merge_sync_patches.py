@@ -26,6 +26,7 @@ Example Usage:
 """
 
 import argparse
+import os
 import subprocess
 import logging
 import tempfile
@@ -134,6 +135,12 @@ def _commit_changes(repo_path: Path, message: str, author_name: str, author_emai
     ], cwd=repo_path)
     logger.debug(f"Committed changes with author {author_name} <{author_email}>")
 
+def _set_authenticated_remote(repo_path: Path, repo_url: str) -> None:
+    """Set the push URL to use the GitHub App token from GH_TOKEN env."""
+    token = os.environ["GH_TOKEN"]
+    remote_url = f"https://x-access-token:{token}@github.com/{repo_url}.git"
+    _run_git(["remote", "set-url", "origin", remote_url], cwd=repo_path)
+
 def _push_changes(repo_path: Path) -> None:
     """Push the commit to origin HEAD."""
     _run_git(["push", "origin", "HEAD"], cwd=repo_path)
@@ -176,6 +183,7 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
         original_commit_msg = _extract_commit_message_from_patch(patch_path)
         commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, original_commit_msg)
         _commit_changes(subrepo_path, commit_msg, author_name, author_email)
+        _set_authenticated_remote(subrepo_path, entry.repo)
         _push_changes(subrepo_path)
         logger.info(f"Patch applied, committed, and pushed to {entry.url} as {author_name} <{author_email}>")
 
