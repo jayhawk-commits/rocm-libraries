@@ -9,7 +9,7 @@
 We welcome contributions to rocPRIM.  Please follow these details to help ensure your contributions will be successfully accepted.
 
 ## Issue Discussion ##
-aaaa
+
 Please use the GitHub Issues tab to notify us of issues.
 
 * Use your best judgement for issue creation. If your issue is already listed, upvote the issue and
