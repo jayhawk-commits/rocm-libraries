@@ -141,9 +141,9 @@ def _set_authenticated_remote(repo_path: Path, repo_url: str) -> None:
     remote_url = f"https://x-access-token:{token}@github.com/{repo_url}.git"
     _run_git(["remote", "set-url", "origin", remote_url], cwd=repo_path)
 
-def _push_changes(repo_path: Path) -> None:
-    """Push the commit to origin HEAD."""
-    _run_git(["push", "origin", "HEAD"], cwd=repo_path)
+def _push_changes(repo_path: Path, branch: str) -> None:
+    """Push the commit to origin of branch."""
+    _run_git(["push", "origin", branch], cwd=repo_path)
     logger.debug(f"Pushed changes from {repo_path} to origin")
 
 def generate_patch(prefix: str, merge_sha: str, patch_path: Path) -> None:
@@ -183,8 +183,8 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
         original_commit_msg = _extract_commit_message_from_patch(patch_path)
         commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, original_commit_msg)
         _commit_changes(subrepo_path, commit_msg, author_name, author_email)
-        _set_authenticated_remote(subrepo_path, entry.repo)
-        _push_changes(subrepo_path)
+        _set_authenticated_remote(subrepo_path, entry.url)
+        _push_changes(subrepo_path, entry.branch)
         logger.info(f"Patch applied, committed, and pushed to {entry.url} as {author_name} <{author_email}>")
 
 def main(argv: Optional[List[str]] = None) -> None:
