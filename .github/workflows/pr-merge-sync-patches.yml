@@ -26,7 +26,7 @@ on:
     types:
       - closed
     branches:
-      - 'develop'
+      - testbed
 
 concurrency:
   group: pr-merge-sync-patch-${{ github.event.pull_request.number }}
