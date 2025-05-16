@@ -149,7 +149,7 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
     """Clone the subrepo, apply the patch, and attribute to the original author with commit message annotations."""
     with tempfile.TemporaryDirectory() as tmpdir:
         subrepo_path = Path(tmpdir) / entry.name
-        _clone_subrepo(entry.url, subrepo_path)
+        _clone_subrepo(entry.url, entry.branch, subrepo_path)
         if dry_run:
             logger.info(f"[Dry-run] Would apply patch to {entry.url} as {author_name} <{author_email}>")
             return
