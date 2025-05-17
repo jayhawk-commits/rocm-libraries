@@ -8,8 +8,6 @@
 hipSPARSELt documentation
 ********************************************************************
 
-FILE EDITS
-
 hipSPARSELt is a SPARSE marshalling library that presents a common interface for multiple supported backends.
 For more information, see :doc:`What is hipSPARSELt? <./what-is-hipsparselt>`
 
