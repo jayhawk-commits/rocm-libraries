@@ -119,7 +119,7 @@ def _extract_commit_message_from_patch(patch_path: Path, monorepo_url: str, pr_n
     pattern = rf"(?<![\w/])(\(?\s*#{pr_number}\s*\)?)"
     for line in lines:
         if line.startswith("Subject: "):
-            subject = line[len("Subject: "):].strip()
+            subject = line[len("Subject: "):].rstrip("\n")
             # Remove leading "[PATCH]" if present
             if subject.startswith("[PATCH]"):
                 subject = subject[len("[PATCH]"):].strip()
@@ -131,7 +131,7 @@ def _extract_commit_message_from_patch(patch_path: Path, monorepo_url: str, pr_n
                 lambda m: f"({monorepo_url}#{pr_number})" if m.group(1).startswith("(") and m.group(1).endswith(")") else f"{monorepo_url}#{pr_number}",
                 subject,
             )
-            commit_msg_lines.append(subject)
+            commit_msg_lines.append(subject + "\n")  # preserve newline explicitly
             in_msg = True
         elif in_msg:
             if line.startswith("---"):
