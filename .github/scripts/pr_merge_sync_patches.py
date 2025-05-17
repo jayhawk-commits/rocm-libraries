@@ -104,8 +104,9 @@ def _stage_changes(repo_path: Path) -> None:
     _run_git(["add", "."], cwd=repo_path)
     logger.debug(f"Staged all changes in {repo_path}")
 
-def _extract_commit_message_from_patch(patch_path: Path) -> str:
-    """Extract the original commit message from the patch file, cleaning squash-merge artifacts."""
+def _extract_commit_message_from_patch(patch_path: Path, monorepo_url: str) -> str:
+    """Extract and clean the original commit message from the patch file,
+    removing '[PATCH]' and qualifying PR numbers like #123 with monorepo prefix."""
     with open(patch_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     commit_msg_lines = []
@@ -113,10 +114,15 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
     for line in lines:
         if line.startswith("Subject: "):
             subject = line[len("Subject: "):].strip()
-            # Remove [PATCH] tag in the title
-            subject = subject.replace("[PATCH]", "").strip()
-            # Remove trailing squash merge PR number like '(#13)' or ' (#13)'
-            subject = re.sub(r"\s*\(#\d+\)$", "", subject)
+            # Remove leading "[PATCH]" if present
+            if subject.startswith("[PATCH]"):
+                subject = subject[len("[PATCH]"):].strip()
+            # Replace standalone #123 with monorepo#123, but skip if already qualified
+            subject = re.sub(
+                r"(^|[\s(\[])(#(\d+))",
+                lambda m: m.group(1) + (monorepo_url + "#" if "/" not in m.group(2) else "") + m.group(3),
+                subject,
+            )
             commit_msg_lines.append(subject)
             in_msg = True
         elif in_msg:
@@ -184,7 +190,7 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
         _configure_git_user(subrepo_path)
         _apply_patch(subrepo_path, patch_path)
         _stage_changes(subrepo_path)
-        original_commit_msg = _extract_commit_message_from_patch(patch_path)
+        original_commit_msg = _extract_commit_message_from_patch(patch_path, monorepo_url)
         commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, original_commit_msg)
         _commit_changes(subrepo_path, commit_msg, author_name, author_email)
         _set_authenticated_remote(subrepo_path, entry.url)
