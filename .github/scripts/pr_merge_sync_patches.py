@@ -104,39 +104,27 @@ def _stage_changes(repo_path: Path) -> None:
     _run_git(["add", "."], cwd=repo_path)
     logger.debug(f"Staged all changes in {repo_path}")
 
-def _extract_commit_message_from_patch(patch_path: Path, monorepo_url: str, pr_number: int) -> str:
-    """
-    Extract and clean the original commit message from the patch file,
-    removing '[PATCH]' and qualifying exact PR number references like '#123' with monorepo prefix,
-    preserving parentheses if present.
-    """
+def _extract_commit_message_from_patch(patch_path: Path) -> str:
+    """Extract and clean the original commit message from the patch file,
+    removing '[PATCH]' and trailing PR references like (#NN) from the title."""
     with open(patch_path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     commit_msg_lines = []
     in_msg = False
-    # Pattern matches an exact PR number reference like '#123', possibly surrounded by parentheses and optional spaces,
-    # but ensures it is not part of a larger word or URL (no preceding alphanumeric or slash).
-    pattern = rf"(?<![\w/])(\(?\s*#{pr_number}\s*\)?)"
     for line in lines:
         if line.startswith("Subject: "):
-            subject = line[len("Subject: "):].rstrip("\n")
+            subject = line[len("Subject: "):].strip()
             # Remove leading "[PATCH]" if present
             if subject.startswith("[PATCH]"):
                 subject = subject[len("[PATCH]"):].strip()
-            # Replace exact PR number references with a prefixed version including monorepo,
-            # e.g. '#123' → 'ROCm/rocm-libraries#123' or '(#123)' → '(ROCm/rocm-libraries#123)',
-            # preserving parentheses if present.
-            subject = re.sub(
-                pattern,
-                lambda m: f"({monorepo_url}#{pr_number})" if m.group(1).startswith("(") and m.group(1).endswith(")") else f"{monorepo_url}#{pr_number}",
-                subject,
-            )
-            commit_msg_lines.append(subject + "\n")  # preserve newline explicitly
+            # Remove trailing PR refs like (#NN)
+            subject = re.sub(r"\s*\(#\d+\)$", "", subject)
+            commit_msg_lines.append(subject + "\n")
             in_msg = True
         elif in_msg:
             if line.startswith("---"):
                 break
-            commit_msg_lines.append(line.lstrip())
+            commit_msg_lines.append(line)
     return "".join(commit_msg_lines).strip()
 
 def _format_commit_message(monorepo_url: str, pr_number: int, merge_sha: str, original_msg: str) -> str:
@@ -198,7 +186,7 @@ def apply_patch_to_subrepo(entry: RepoEntry, monorepo_url: str, monorepo_pr: int
         _configure_git_user(subrepo_path)
         _apply_patch(subrepo_path, patch_path)
         _stage_changes(subrepo_path)
-        original_commit_msg = _extract_commit_message_from_patch(patch_path, monorepo_url, monorepo_pr)
+        original_commit_msg = _extract_commit_message_from_patch(patch_path)
         commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, original_commit_msg)
         _commit_changes(subrepo_path, commit_msg, author_name, author_email)
         _set_authenticated_remote(subrepo_path, entry.url)
