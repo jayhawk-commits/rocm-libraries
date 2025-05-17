@@ -104,8 +104,8 @@
       "url": "jayhawk-commits/hipSPARSELt",
       "branch": "develop",
       "category": "projects",
-      "auto_subtree_pull": true,
-      "auto_subtree_push": false,
+      "auto_subtree_pull": false,
+      "auto_subtree_push": true,
       "enable_pr_fanout": false
     },
     {
