@@ -24,6 +24,7 @@ This table provides the current status of the migration of specific ROCm librari
 | `hipsparse`         | Pending     |  |
 | `hipsparselt`       | Pending     |  |
 | `miopen`            | Pending     |  |
+| `mxdatagenerator`   | Completed   |  |
 | `rocblas`           | Pending     |  |
 | `rocfft`            | Pending     |  |
 | `rocprim`           | Completed   |  |
@@ -67,6 +68,7 @@ projects/
 shared/
   rocroller/
   tensile/
+  mxdatagenerator/
 ```
 
 - Each folder under `projects/` corresponds to a ROCm library that was previously maintained in a standalone GitHub repository and released as distinct packages.
