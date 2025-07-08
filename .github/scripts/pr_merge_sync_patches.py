@@ -123,10 +123,12 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
             commit_msg_lines.append(subject + "\n")
             in_msg = True
         elif in_msg:
-            if line.startswith("---"):
+            if line.strip() == "---":
                 break
-            commit_msg_lines.append(line)
-    return "".join(commit_msg_lines).strip()
+            if line.strip():  # Skip empty lines
+                commit_msg_lines.append(line.strip())
+    msg = "\n".join(commit_msg_lines).strip()
+    return msg if msg else "Patch from monorepo PR"
 
 def _format_commit_message(monorepo_url: str, pr_number: int, merge_sha: str, original_msg: str) -> str:
     """Prepend a sync annotation to the original commit message."""
