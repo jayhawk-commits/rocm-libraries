@@ -105,6 +105,10 @@ def _stage_changes(repo_path: Path) -> None:
     _run_git(["add", "."], cwd=repo_path)
     logger.debug(f"Staged all changes in {repo_path}")
 
+def _get_commit_message_locally(sha: str) -> str:
+    """Get the full commit message for a given SHA from the monorepo."""
+    return _run_git(["log", "-1", "--pretty=%B", sha])
+
 def _extract_commit_message_from_patch(patch_path: Path) -> str:
     """Extract and clean the original commit message from the patch file,
     removing '[PATCH]' and trailing PR references like (#NN) from the title."""
@@ -250,13 +254,9 @@ def apply_patches_and_squash(entry: RepoEntry, monorepo_url: str, monorepo_pr: i
         # Squash all commits since base_commit into one
         logger.debug(f"Squashing commits since {base_commit} into one")
 
-        # Create a combined commit message from all individual commit messages
-        combined_msg_lines = []
-        for patch_path in patch_paths:
-            orig_msg = _extract_commit_message_from_patch(patch_path)
-            combined_msg_lines.append(orig_msg)
-            combined_msg_lines.append("\n---\n")
-        combined_commit_msg = f"[rocm-libraries] {monorepo_url}#{monorepo_pr} (commit {merge_sha[:7]})\n\n" + "".join(combined_msg_lines).strip()
+        # Ignore the commit message from the individual patch commits and use the merge commit message
+        merge_commit_msg = _get_commit_message_locally(merge_sha)
+        combined_commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, merge_commit_msg.strip())
 
         # Perform squash via git reset + commit
         _run_git(["reset", "--soft", base_commit], cwd=subrepo_path)
