@@ -25,7 +25,7 @@ name: Merged PR to Patch Subrepos
 on:
   push:
     branches:
-      - 'develop'
+      - 'testbed'
 
 concurrency:
   group: pr-merge-sync-patch-${{ github.sha }}
