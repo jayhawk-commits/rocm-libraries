@@ -105,10 +105,6 @@ def _stage_changes(repo_path: Path) -> None:
     _run_git(["add", "."], cwd=repo_path)
     logger.debug(f"Staged all changes in {repo_path}")
 
-def _get_commit_message_locally(sha: str) -> str:
-    """Get the full commit message for a given SHA from the monorepo."""
-    return _run_git(["log", "-1", "--pretty=%B", sha])
-
 def _extract_commit_message_from_patch(patch_path: Path) -> str:
     """Extract and clean the original commit message from the patch file,
     removing '[PATCH]' and trailing PR references like (#NN) from the title."""
@@ -127,12 +123,10 @@ def _extract_commit_message_from_patch(patch_path: Path) -> str:
             commit_msg_lines.append(subject + "\n")
             in_msg = True
         elif in_msg:
-            if line.strip() == "---":
+            if line.startswith("---"):
                 break
-            if line.strip():  # Skip empty lines
-                commit_msg_lines.append(line.strip())
-    msg = "\n".join(commit_msg_lines).strip()
-    return msg if msg else "Patch from monorepo PR"
+            commit_msg_lines.append(line)
+    return "".join(commit_msg_lines).strip()
 
 def _format_commit_message(monorepo_url: str, pr_number: int, merge_sha: str, original_msg: str) -> str:
     """Prepend a sync annotation to the original commit message."""
@@ -178,36 +172,15 @@ def generate_file_level_patches(prefix: str, merge_sha: str, output_dir: Path) -
         # Note: format-patch does not have an easy single-file option, so fallback to git diff output to patch file
         patch_path = output_dir / (changed_file.replace("/", "_") + ".patch")
         diff_output = _run_git([
-            "diff", f"{merge_sha}^!", "--", changed_file
+            "diff", f"{merge_sha}^!", f"--relative={prefix}", "--", changed_file
         ])
         # Write patch to file, but rewrite paths to be relative to subtree prefix by removing prefix/
         # Since changed_file is under prefix, strip prefix + slash from paths in patch header
-        adjusted_patch = _adjust_patch_paths(diff_output, prefix)
-        patch_path.write_text(adjusted_patch, encoding="utf-8")
+        patch_path.write_text(diff_output, encoding="utf-8")
         patch_files.append(patch_path)
 
     logger.debug(f"Generated {len(patch_files)} file-level patches for prefix '{prefix}'")
     return patch_files
-
-def _adjust_patch_paths(patch_text: str, prefix: str) -> str:
-    """
-    Remove prefix/ from the paths in the patch text to make it relative for application in subrepo.
-    """
-    # Typical patch headers:
-    # --- a/prefix/filename
-    # +++ b/prefix/filename
-    # We replace 'a/prefix/' and 'b/prefix/' with 'a/' and 'b/'
-    lines = patch_text.splitlines()
-    adjusted_lines = []
-    prefix_slash = prefix.rstrip("/") + "/"
-    for line in lines:
-        if line.startswith("--- a/") and line[6:].startswith(prefix_slash):
-            adjusted_lines.append("--- a/" + line[6+len(prefix_slash):])
-        elif line.startswith("+++ b/") and line[6:].startswith(prefix_slash):
-            adjusted_lines.append("+++ b/" + line[6+len(prefix_slash):])
-        else:
-            adjusted_lines.append(line)
-    return "\n".join(adjusted_lines) + "\n"
 
 def resolve_patch_author(client: GitHubCLIClient, repo: str, pr: int) -> tuple[str, str]:
     """Determine the appropriate author for the patch
@@ -254,9 +227,13 @@ def apply_patches_and_squash(entry: RepoEntry, monorepo_url: str, monorepo_pr: i
         # Squash all commits since base_commit into one
         logger.debug(f"Squashing commits since {base_commit} into one")
 
-        # Ignore the commit message from the individual patch commits and use the merge commit message
-        merge_commit_msg = _get_commit_message_locally(merge_sha)
-        combined_commit_msg = _format_commit_message(monorepo_url, monorepo_pr, merge_sha, merge_commit_msg.strip())
+        # Create a combined commit message from all individual commit messages
+        combined_msg_lines = []
+        for patch_path in patch_paths:
+            orig_msg = _extract_commit_message_from_patch(patch_path)
+            combined_msg_lines.append(orig_msg)
+            combined_msg_lines.append("\n---\n")
+        combined_commit_msg = f"[rocm-libraries] {monorepo_url}#{monorepo_pr} (commit {merge_sha[:7]})\n\n" + "".join(combined_msg_lines).strip()
 
         # Perform squash via git reset + commit
         _run_git(["reset", "--soft", base_commit], cwd=subrepo_path)
